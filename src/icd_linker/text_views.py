@@ -74,9 +74,21 @@ def build_views(
     parents = resolve_parent_names(term, lookup)
     if parents:
         sections.append("Parent concepts: " + "; ".join(parents))
+    raw_fields = term.get("raw_fields")
+    if isinstance(raw_fields, Mapping):
+        raw_class_kind = clean_text(raw_fields.get("classKind"))
+        if raw_class_kind and raw_class_kind.casefold() != clean_text(
+            term.get("class_kind")
+        ).casefold():
+            sections.append("Class kind: " + raw_class_kind)
+        chapter = clean_text(raw_fields.get("chapter"))
+        if chapter:
+            sections.append("ICD chapter: " + chapter)
+        depth = clean_text(raw_fields.get("depth"))
+        if depth:
+            sections.append("Hierarchy depth: " + depth)
     context = "\n".join(sections)
     return {
         "name_text": name,
         "context_text": context[:max_characters],
     }
-

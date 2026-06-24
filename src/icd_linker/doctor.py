@@ -10,8 +10,8 @@ def doctor(cfg: Dict[str, Any]) -> Dict[str, Any]:
     packages = {
         name: importlib.util.find_spec(name) is not None
         for name in (
-            "torch", "transformers", "sentence_transformers",
-            "chromadb", "BCEmbedding", "yaml", "numpy",
+            "torch", "transformers", "chromadb", "BCEmbedding", "yaml",
+            "numpy",
         )
     }
     try:

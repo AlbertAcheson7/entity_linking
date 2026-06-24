@@ -59,13 +59,22 @@ class Retriever:
     ) -> List[dict]:
         retrieval = self.cfg["retrieval"]
         fused_top = retrieval["fused_top_k"]
-        rrf_k = retrieval["rrf_constant"]
+        strategy = retrieval.get("fusion_strategy", "rrf")
+        if strategy not in {"rrf", "best_view"}:
+            raise ValueError(f"unknown fusion_strategy: {strategy}")
         scores = defaultdict(float)
         ranks = defaultdict(dict)
         for view, ids in (("name", name_ids), ("context", context_ids)):
             for rank, uid in enumerate(ids, 1):
-                scores[uid] += 1.0 / (rrf_k + rank)
                 ranks[uid][view] = rank
+                if strategy == "rrf":
+                    rrf_k = retrieval["rrf_constant"]
+                    scores[uid] += 1.0 / (rrf_k + rank)
+                else:
+                    # Treat name/context as alternative target views. If a UID
+                    # appears in both views, keep its best single-view rank
+                    # instead of adding evidence from both lists.
+                    scores[uid] = max(scores[uid], 1.0 / rank)
         candidates = sorted(scores, key=scores.get, reverse=True)[:fused_top]
         if self.reranker:
             passages = [self.targets[uid]["context_text"] for uid in candidates]
@@ -87,7 +96,9 @@ class Retriever:
                 "term_uid": uid,
                 "code": self.targets[uid].get("code", ""),
                 "name": self.targets[uid]["name_text"],
-                "rrf_score": scores[uid],
+                "fusion_strategy": strategy,
+                "fusion_score": scores[uid],
+                "rrf_score": scores[uid] if strategy == "rrf" else None,
                 "view_ranks": ranks[uid],
                 "rerank_score": rerank_lookup.get(uid),
             }

@@ -11,9 +11,8 @@
 
 from __future__ import annotations
 
-import os
 import inspect
-from typing import Any, Dict, Iterable, List, Sequence
+from typing import Any, Dict, List, Sequence
 
 import numpy as np
 
@@ -64,47 +63,6 @@ class BCEEmbeddingAdapter(EmbeddingAdapter):
         values = self.model.encode(list(texts), **kwargs)
         result = np.asarray(values, dtype=np.float32)
         return normalize_and_check(result)
-
-
-class HFCLSEmbeddingAdapter(EmbeddingAdapter):
-    """直接使用 Hugging Face 模型的 CLS token 作为文本向量。"""
-
-    def __init__(self, model_name: str, max_length: int = 512):
-        import torch
-        from transformers import AutoModel, AutoTokenizer
-
-        # 有 CUDA 时自动使用 GPU，否则退回 CPU；该适配器主要用于通用 HF 模型。
-        self.torch = torch
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModel.from_pretrained(model_name).to(self.device).eval()
-        self.max_length = max_length
-
-    def encode(
-        self, texts: Sequence[str], batch_size: int, show_progress: bool = False
-    ) -> np.ndarray:
-        from tqdm import tqdm
-
-        outputs = []
-        iterator = range(0, len(texts), batch_size)
-        if show_progress:
-            iterator = tqdm(iterator, desc="Embedding")
-        with self.torch.no_grad():
-            for start in iterator:
-                batch = list(texts[start:start + batch_size])
-
-                # padding 对齐批内长度，truncation 防止超过模型最大输入长度。
-                tokens = self.tokenizer(
-                    batch, padding=True, truncation=True,
-                    max_length=self.max_length, return_tensors="pt",
-                )
-                tokens = {k: v.to(self.device) for k, v in tokens.items()}
-
-                # last_hidden_state[:, 0] 即每条文本第一个 token（通常为 CLS）的表示。
-                hidden = self.model(**tokens, return_dict=True).last_hidden_state[:, 0]
-                hidden = self.torch.nn.functional.normalize(hidden, dim=1)
-                outputs.append(hidden.float().cpu().numpy())
-        return normalize_and_check(np.concatenate(outputs, axis=0))
 
 
 def normalize_and_check(values: np.ndarray) -> np.ndarray:

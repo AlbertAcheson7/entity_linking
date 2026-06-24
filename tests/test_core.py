@@ -40,6 +40,23 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(views["context_text"].count("Asiatic cholera"), 1)
         self.assertIn("Parent concepts: Infectious diseases", views["context_text"])
 
+    def test_context_includes_raw_icd_hierarchy_fields(self):
+        term = {
+            "term_uid": "x",
+            "name": "Cholera due to Vibrio cholerae 01, biovar eltor",
+            "code": "A00.1",
+            "description": "Cholera due to Vibrio cholerae 01, biovar eltor",
+            "raw_fields": {
+                "classKind": "category",
+                "chapter": "I",
+                "depth": "2",
+            },
+        }
+        views = build_views(term, {}, 6000)
+        self.assertIn("Class kind: category", views["context_text"])
+        self.assertIn("ICD chapter: I", views["context_text"])
+        self.assertIn("Hierarchy depth: 2", views["context_text"])
+
     def test_ranking_metrics_multi_target(self):
         metrics = RankingMetrics((1, 5, 10, 50))
         metrics.add(["wrong", "target-b", "target-a"], {"target-a", "target-b"})
@@ -53,6 +70,7 @@ class CoreTests(unittest.TestCase):
         retriever = object.__new__(Retriever)
         retriever.cfg = {
             "retrieval": {
+                "fusion_strategy": "rrf",
                 "fused_top_k": 3, "rrf_constant": 60,
                 "reranker_batch_size": 8,
             }
@@ -66,6 +84,27 @@ class CoreTests(unittest.TestCase):
         result = retriever._fuse(["a", "b"], ["b", "c"], "query", 3)
         self.assertEqual(result[0]["term_uid"], "b")
         self.assertEqual({x["term_uid"] for x in result}, {"a", "b", "c"})
+
+    def test_best_view_fusion_does_not_boost_overlap(self):
+        retriever = object.__new__(Retriever)
+        retriever.cfg = {
+            "retrieval": {
+                "fusion_strategy": "best_view",
+                "fused_top_k": 3, "rrf_constant": 60,
+                "reranker_batch_size": 8,
+            }
+        }
+        retriever.targets = {
+            "a": {"name_text": "A", "context_text": "A"},
+            "b": {"name_text": "B", "context_text": "B"},
+            "c": {"name_text": "C", "context_text": "C"},
+        }
+        retriever.reranker = None
+        result = retriever._fuse(["a", "b"], ["b", "c"], "query", 3)
+        self.assertEqual(result[0]["term_uid"], "a")
+        self.assertEqual(result[1]["term_uid"], "b")
+        self.assertIsNone(result[0]["rrf_score"])
+        self.assertEqual(result[0]["fusion_strategy"], "best_view")
 
 
 if __name__ == "__main__":

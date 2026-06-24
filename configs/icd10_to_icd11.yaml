@@ -41,6 +41,7 @@ index:
     target_context: icd11_mms_context_bce
 
 retrieval:
+  fusion_strategy: best_view # "rrf", "best_view"
   query_batch_size: 128
   per_view_top_k: 50
   fused_top_k: 50

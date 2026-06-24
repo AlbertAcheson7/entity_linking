@@ -109,6 +109,7 @@ def evaluate(
             cfg["models"]["embedding"]
             if variant == "base" else cfg["paths"]["finetuned_model_dir"]
         ),
+        "fusion_strategy": cfg["retrieval"].get("fusion_strategy", "rrf"),
         "reranker_model": cfg["models"]["reranker"] if rerank else None,
         "metrics": metric_values,
     }

@@ -53,10 +53,12 @@ tar --use-compress-program=unzstd -xf /path/to/icd_linking_transfer.tar.zst
 ```bash
 python -m icd_linker.cli prepare --config configs/icd10_to_icd11.yaml
 python -m icd_linker.cli build-index --config configs/icd10_to_icd11.yaml --variant base
+python -m icd_linker.cli evaluate --config configs/icd10_to_icd11.yaml --variant base
 python -m icd_linker.cli evaluate --config configs/icd10_to_icd11.yaml --variant base --rerank
 python -m icd_linker.cli mine-negatives --config configs/icd10_to_icd11.yaml
 python -m icd_linker.cli train --config configs/icd10_to_icd11.yaml
 python -m icd_linker.cli build-index --config configs/icd10_to_icd11.yaml --variant finetuned
+python -m icd_linker.cli evaluate --config configs/icd10_to_icd11.yaml --variant finetuned
 python -m icd_linker.cli evaluate --config configs/icd10_to_icd11.yaml --variant finetuned --rerank
 python -m icd_linker.cli compare --config configs/icd10_to_icd11.yaml
 ```
@@ -107,6 +109,37 @@ Chroma 中仅保留精简元数据（Metadata）。
 
 ```text
 data/prepared/target_terms.jsonl
+```
+
+## 检索与评估说明
+
+`prepare` 会把原始术语整理为双视图：
+
+- `name_text`：仅术语名称；
+- `context_text`：名称、编码、同义词、索引词、描述、定义和父概念。
+
+`build-index` 会把这两个视图分别写入 Chroma 的 target-name 与 target-context
+集合。若发现 Chroma 中的 context 只有 title/code，优先重新运行
+`prepare` 和 `build-index`，因为 `build-index` 会删除旧集合并重建。
+
+`evaluate --variant base` 是未微调 BCE embedding 的纯粗检索指标，写入：
+
+```text
+experiments/base/test_retrieval_metrics.json
+experiments/base/test_retrieval_predictions.jsonl
+```
+
+`evaluate --variant base --rerank` 会在同一批粗检索候选上使用 reranker，写入
+`test_reranked_*`，不会覆盖纯粗检索结果。`finetuned` 版本同理。
+
+默认融合策略为 `retrieval.fusion_strategy: best_view`：source query 分别检索
+target 的 `name_text` 与 `context_text`，只要任一视图召回某个 target UID，
+该 UID 就进入候选；如果两个视图都召回同一错误 UID，不再像 RRF 那样叠加加权。
+如需复现旧逻辑，可改为：
+
+```yaml
+retrieval:
+  fusion_strategy: rrf
 ```
 
 ## 内存占用估算
