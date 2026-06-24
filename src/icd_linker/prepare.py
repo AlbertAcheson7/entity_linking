@@ -18,6 +18,8 @@ def _prepared_term(term: dict, lookup: Dict[str, dict], max_chars: int) -> dict:
     # 1. name_text：仅术语名称，适合精确、短文本语义匹配；
     # 2. context_text：名称 + 编码 + 同义词 + 描述 + 定义 + 上位概念，
     #    适合利用更丰富的语义上下文进行召回。
+    # 3. path_text：名称 + 编码 + 分类/章节/父概念等层级信息，
+    #    适合做分类体系位置相关的召回实验。
     views = build_views(term, lookup, max_chars)
 
     # 保留追踪术语身份、版本和来源所需的字段，便于索引和结果回溯。
@@ -128,6 +130,7 @@ def prepare(cfg: Dict[str, Any]) -> Dict[str, Any]:
                 "source_term_uid": uid,
                 "query_name_text": prepared_sources[uid]["name_text"],
                 "query_context_text": prepared_sources[uid]["context_text"],
+                "query_path_text": prepared_sources[uid]["path_text"],
                 "positive_target_uids": sorted(positives[uid]),
             })
         split_counts[split_name] = write_jsonl(

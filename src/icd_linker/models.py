@@ -65,6 +65,31 @@ class BCEEmbeddingAdapter(EmbeddingAdapter):
         return normalize_and_check(result)
 
 
+class SentenceTransformerEmbeddingAdapter(EmbeddingAdapter):
+    """Use sentence-transformers models through the same encode interface."""
+
+    def __init__(self, model_name: str, device: str | None = None):
+        from sentence_transformers import SentenceTransformer
+
+        kwargs = {}
+        if device is not None:
+            kwargs["device"] = device
+        self.model = SentenceTransformer(model_name, **kwargs)
+
+    def encode(
+        self, texts: Sequence[str], batch_size: int, show_progress: bool = False
+    ) -> np.ndarray:
+        values = self.model.encode(
+            list(texts),
+            batch_size=batch_size,
+            show_progress_bar=show_progress,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+        )
+        result = np.asarray(values, dtype=np.float32)
+        return normalize_and_check(result)
+
+
 def normalize_and_check(values: np.ndarray) -> np.ndarray:
     """校验向量数值，并逐行做 L2 归一化，便于用点积计算余弦相似度。"""
     if values.ndim != 2 or not np.isfinite(values).all():
@@ -80,13 +105,21 @@ def normalize_and_check(values: np.ndarray) -> np.ndarray:
 
 def load_embedding(cfg: Dict[str, Any], variant: str) -> EmbeddingAdapter:
     """根据 variant 加载基础模型或本地微调模型。"""
+    adapter = cfg["models"].get("embedding_adapter", "bce")
+    device = cfg["models"].get("embedding_device")
     if variant == "base":
-        return BCEEmbeddingAdapter(cfg["models"]["embedding"])
-    if variant == "finetuned":
+        model_name = cfg["models"]["embedding"]
+    elif variant == "finetuned":
         # BCEmbedding 可直接读取本地 Hugging Face checkpoint；这样基础版与微调版
         # 使用完全相同的池化和归一化逻辑，评估结果才具有可比性。
-        return BCEEmbeddingAdapter(cfg["paths"]["finetuned_model_dir"])
-    raise ValueError(f"unknown variant: {variant}")
+        model_name = cfg["paths"]["finetuned_model_dir"]
+    else:
+        raise ValueError(f"unknown variant: {variant}")
+    if adapter == "bce":
+        return BCEEmbeddingAdapter(model_name, device=device)
+    if adapter in {"sentence_transformers", "sentence-transformers"}:
+        return SentenceTransformerEmbeddingAdapter(model_name, device=device)
+    raise ValueError(f"unknown embedding_adapter: {adapter}")
 
 
 class BCEReranker:

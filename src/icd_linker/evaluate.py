@@ -3,10 +3,8 @@
 典型调用：
 1. evaluate --config ... --variant base
    仅使用 base embedding 检索，并用 RRF 融合名称视图和上下文视图的排名。
-# TODO: RRF融合是啥？
 2. evaluate --config ... --variant base --rerank
    先执行完全相同的向量检索与 RRF 融合，再用 reranker 对候选重新排序。
-# TODO: 所以我之前在服务器上跑的那一次，结果相当于是一共有四个metric。
 
 输入：
 - 配置文件中的索引目录、模型、检索参数和实验输出目录；
@@ -15,17 +13,11 @@
 - build-index 已写入 Chroma 的 target-name 和 target-context 两个集合；
 - rerank=True 时还会加载配置中的 reranker 模型。
 
-# TODO: 所以说在最后Metric的时候是对他的target U ID进行的Metric比较，那你在模型中呢你模型中你希望他直接给你输入的是U ID还是说输入的是 target name和context name呢？
-
 输出：
 - experiments/<variant>/<split>_retrieval_predictions.jsonl，或
   <split>_reranked_predictions.jsonl：逐查询的正确答案和候选排名；
-- 同名 *_metrics.json：Recall@K、AllTargetRecall@K、MRR 等汇总指标；
+- 同名 *_metrics.json：Hit@K、Acc@K、AllTargetRecall@K、MRR 等汇总指标；
 - evaluate() 同时返回该指标 JSON，CLI 会将它打印到终端/日志。
-
-# TODO: 需要在服务器中查看输出文件夹中的信息,是不是模型rerank之后的输出的结果有存储呢？.以及输出的四个metric.json.
-
-# TODO: 添加评价指标ACC@k， recall@k,hit@k.
 
 """
 
@@ -35,7 +27,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from .io_utils import read_jsonl, write_json, write_jsonl
-from .metrics import RankingMetrics
+from .metrics import DEFAULT_CUTOFFS, RankingMetrics
 from .retrieval import Retriever
 
 
@@ -52,10 +44,11 @@ def evaluate(
     # --rerank 只控制是否加载交叉编码 reranker，不会切换向量索引。
     retriever = Retriever(cfg, variant, rerank=rerank)
 
-    # 配置的 output_top_k=10 主要用于普通 link 推理；评估固定至少保留 50
-    # 个候选，才能正确计算 Recall/AllTargetRecall@50 和 MRR。
-    max_k = max(50, cfg["retrieval"]["output_top_k"])
-    metrics = RankingMetrics((1, 5, 10, 50))
+    # 配置的 output_top_k=10 主要用于普通 link 推理；评估固定至少保留到
+    # 最大指标截断点，才能正确计算 Hit/AllTargetRecall@K 和 MRR。
+    metric_cutoffs = DEFAULT_CUTOFFS
+    max_k = max(max(metric_cutoffs), cfg["retrieval"]["output_top_k"])
+    metrics = RankingMetrics(metric_cutoffs)
     predictions = []
 
     # 默认读取 prepare.py 生成的 data/prepared/test.jsonl。
@@ -65,27 +58,22 @@ def evaluate(
     for start in range(0, len(rows), batch_size):
         batch = rows[start:start + batch_size]
 
-        # Retriever 分别用 query_name_text 查询 target-name 索引、用
-        # query_context_text 查询 target-context 索引，然后以 RRF 融合排名。
+        # Retriever 会根据 retrieval.backend 选择 Chroma 索引检索或矩阵检索。
+        # matrix + ranking_unit=view_record 时，会把 target 的多个文本视图
+        # 展开成独立候选记录；指标仍按候选记录对应的 term_uid 判断命中。
         # 若 rerank=True，还会用 query_context_text 与候选目标 context_text
-        # 逐对打分，并按 rerank_score 从高到低重新排列前 50 个候选。
-        results = retriever.retrieve_batch(
-            [
-                (row["query_name_text"], row["query_context_text"])
-                for row in batch
-            ],
-            top_k=max_k,
-        )
+        # 逐对打分，并按 rerank_score 从高到低重新排列候选。
+        results = retriever.retrieve_batch(batch, top_k=max_k)
         for row, candidates in zip(batch, results):
             ranked = [item["term_uid"] for item in candidates]
             positives = set(row["positive_target_uids"])
 
             # 指标含义：
-            # Recall@K：Top-K 中是否至少命中一个正确目标，再对所有查询取平均；
-            #            因此它本质上是 Hit@K/查询级命中率。
+            # Hit@K：Top-K 中是否至少命中一个正确目标，再对所有查询取平均。
             # AllTargetRecall@K：Top-K 覆盖了该查询全部正确目标中的多少比例，
             #                    再对所有查询取平均，适合一对多映射。
             # MRR：第一个正确目标排名的倒数，再对所有查询取平均。
+            # Acc@K：Hit@K 的别名，便于和分类/链接报告对齐。
             metrics.add(ranked, positives)
 
             # 保存完整逐查询结果，便于检查错例、候选分数和两个视图的原始排名。
@@ -97,10 +85,8 @@ def evaluate(
     suffix = "reranked" if rerank else "retrieval"
     metric_values = metrics.result()
     if rerank:
-        # 这两个字段是便于报告展示的别名；数值与 rerank 后的 Recall@1/@5
-        # 完全相同，并不是额外计算出的另一套指标。
-        metric_values["Hit@1_after_reranking"] = metric_values["Recall@1"]
-        metric_values["Hit@5_after_reranking"] = metric_values["Recall@5"]
+        # 这是便于报告展示的别名；数值与 rerank 后的 Hit@1 完全相同。
+        metric_values["Hit@1_after_reranking"] = metric_values["Hit@1"]
     output = {
         "variant": variant,
         "split": split,
@@ -109,7 +95,13 @@ def evaluate(
             cfg["models"]["embedding"]
             if variant == "base" else cfg["paths"]["finetuned_model_dir"]
         ),
+        "embedding_adapter": cfg["models"].get("embedding_adapter", "bce"),
+        "retrieval_backend": cfg["retrieval"].get("backend", "chroma"),
         "fusion_strategy": cfg["retrieval"].get("fusion_strategy", "rrf"),
+        "ranking_unit": cfg["retrieval"].get("ranking_unit"),
+        "aggregation": cfg["retrieval"].get("aggregation"),
+        "query_text_key": cfg["retrieval"].get("query_text_key"),
+        "target_view_keys": cfg["retrieval"].get("target_view_keys"),
         "reranker_model": cfg["models"]["reranker"] if rerank else None,
         "metrics": metric_values,
     }

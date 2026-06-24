@@ -88,7 +88,28 @@ def build_views(
         if depth:
             sections.append("Hierarchy depth: " + depth)
     context = "\n".join(sections)
+
+    path_sections = [name]
+    if code:
+        path_sections.append(f"Code: {code}")
+    class_kind = clean_text(term.get("class_kind"))
+    if class_kind:
+        path_sections.append("Class kind: " + class_kind)
+    if parents:
+        path_sections.append("Parent concepts: " + "; ".join(parents))
+    if isinstance(raw_fields, Mapping):
+        chapter = clean_text(raw_fields.get("chapter"))
+        if chapter:
+            path_sections.append("ICD chapter: " + chapter)
+        depth = clean_text(raw_fields.get("depth"))
+        if depth:
+            path_sections.append("Hierarchy depth: " + depth)
+        raw_class_kind = clean_text(raw_fields.get("classKind"))
+        if raw_class_kind and raw_class_kind.casefold() != class_kind.casefold():
+            path_sections.append("Raw class kind: " + raw_class_kind)
+    path = "\n".join(path_sections)
     return {
         "name_text": name,
         "context_text": context[:max_characters],
+        "path_text": path[:max_characters],
     }
