@@ -1,0 +1,22 @@
+{
+  "variant": "base",
+  "split": "test",
+  "reranked": true,
+  "embedding_model": "maidalun1020/bce-embedding-base_v1",
+  "fusion_strategy": "best_view",
+  "reranker_model": "maidalun1020/bce-reranker-base_v1",
+  "metrics": {
+    "Recall@1": 0.23632038065027755,
+    "Recall@5": 0.5194290245836638,
+    "Recall@10": 0.6566217287866772,
+    "Recall@50": 0.809674861221253,
+    "AllTargetRecall@1": 0.23092783505154643,
+    "AllTargetRecall@5": 0.496727585129647,
+    "AllTargetRecall@10": 0.6274703818518251,
+    "AllTargetRecall@50": 0.7764858963229431,
+    "MRR": 0.36436704556494026,
+    "queries": 1261,
+    "Hit@1_after_reranking": 0.23632038065027755,
+    "Hit@5_after_reranking": 0.5194290245836638
+  }
+}

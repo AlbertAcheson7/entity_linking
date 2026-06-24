@@ -1,0 +1,22 @@
+{
+  "variant": "finetuned",
+  "split": "test",
+  "reranked": true,
+  "embedding_model": "/home/zhangzy/entity_linking/models/finetuned/best",
+  "fusion_strategy": "best_view",
+  "reranker_model": "maidalun1020/bce-reranker-base_v1",
+  "metrics": {
+    "Recall@1": 0.253766851704996,
+    "Recall@5": 0.5543219666931007,
+    "Recall@10": 0.7153053132434576,
+    "Recall@50": 0.9754163362410785,
+    "AllTargetRecall@1": 0.2465960156681806,
+    "AllTargetRecall@5": 0.5333321317857401,
+    "AllTargetRecall@10": 0.6844841584532307,
+    "AllTargetRecall@50": 0.9487537653566919,
+    "MRR": 0.39596048308849524,
+    "queries": 1261,
+    "Hit@1_after_reranking": 0.253766851704996,
+    "Hit@5_after_reranking": 0.5543219666931007
+  }
+}

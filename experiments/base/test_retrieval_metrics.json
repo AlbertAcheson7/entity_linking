@@ -1,0 +1,20 @@
+{
+  "variant": "base",
+  "split": "test",
+  "reranked": false,
+  "embedding_model": "maidalun1020/bce-embedding-base_v1",
+  "fusion_strategy": "best_view",
+  "reranker_model": null,
+  "metrics": {
+    "Recall@1": 0.3758921490880254,
+    "Recall@5": 0.591593973037272,
+    "Recall@10": 0.6843774781919112,
+    "Recall@50": 0.809674861221253,
+    "AllTargetRecall@1": 0.35656825991877533,
+    "AllTargetRecall@5": 0.5565163358977793,
+    "AllTargetRecall@10": 0.6478327514409988,
+    "AllTargetRecall@50": 0.7764858963229431,
+    "MRR": 0.4702494933756975,
+    "queries": 1261
+  }
+}

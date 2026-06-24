@@ -1,0 +1,61 @@
+{
+  "results": {
+    "base": {
+      "variant": "base",
+      "split": "test",
+      "reranked": true,
+      "embedding_model": "maidalun1020/bce-embedding-base_v1",
+      "fusion_strategy": "best_view",
+      "reranker_model": "maidalun1020/bce-reranker-base_v1",
+      "metrics": {
+        "Recall@1": 0.23632038065027755,
+        "Recall@5": 0.5194290245836638,
+        "Recall@10": 0.6566217287866772,
+        "Recall@50": 0.809674861221253,
+        "AllTargetRecall@1": 0.23092783505154643,
+        "AllTargetRecall@5": 0.496727585129647,
+        "AllTargetRecall@10": 0.6274703818518251,
+        "AllTargetRecall@50": 0.7764858963229431,
+        "MRR": 0.36436704556494026,
+        "queries": 1261,
+        "Hit@1_after_reranking": 0.23632038065027755,
+        "Hit@5_after_reranking": 0.5194290245836638
+      }
+    },
+    "finetuned": {
+      "variant": "finetuned",
+      "split": "test",
+      "reranked": true,
+      "embedding_model": "/home/zhangzy/entity_linking/models/finetuned/best",
+      "fusion_strategy": "best_view",
+      "reranker_model": "maidalun1020/bce-reranker-base_v1",
+      "metrics": {
+        "Recall@1": 0.253766851704996,
+        "Recall@5": 0.5543219666931007,
+        "Recall@10": 0.7153053132434576,
+        "Recall@50": 0.9754163362410785,
+        "AllTargetRecall@1": 0.2465960156681806,
+        "AllTargetRecall@5": 0.5333321317857401,
+        "AllTargetRecall@10": 0.6844841584532307,
+        "AllTargetRecall@50": 0.9487537653566919,
+        "MRR": 0.39596048308849524,
+        "queries": 1261,
+        "Hit@1_after_reranking": 0.253766851704996,
+        "Hit@5_after_reranking": 0.5543219666931007
+      }
+    }
+  },
+  "finetuned_minus_base": {
+    "Recall@1": 0.01744647105471847,
+    "Recall@5": 0.03489294210943694,
+    "Recall@10": 0.05868358445678035,
+    "Recall@50": 0.1657414750198255,
+    "AllTargetRecall@1": 0.015668180616634164,
+    "AllTargetRecall@5": 0.03660454665609314,
+    "AllTargetRecall@10": 0.05701377660140561,
+    "AllTargetRecall@50": 0.1722678690337488,
+    "MRR": 0.03159343752355498,
+    "Hit@1_after_reranking": 0.01744647105471847,
+    "Hit@5_after_reranking": 0.03489294210943694
+  }
+}

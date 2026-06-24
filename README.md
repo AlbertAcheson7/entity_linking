@@ -4,7 +4,7 @@
 
 ## 数据
 
-项目使用 `medical_alignment_pipeline` 生成的标准化数据文件：
+项目使用 `medical_alignment_pipeline` in mac 生成的标准化数据文件：
 
 ```text
 data/source/
