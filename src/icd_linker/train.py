@@ -6,9 +6,9 @@
     3. target_terms.jsonl：目标 ICD 概念 UID 到 context_text 等信息的词典。
     4. cfg：基础模型、训练超参数、随机种子和输出路径。
 输出：
-    1. finetuned_model_dir/：验证集 Recall@10 最优轮次的模型与 tokenizer。
+    1. finetuned_model_dir/：验证集 Hit@10 最优轮次的模型与 tokenizer。
     2. finetuned_model_dir/training_state.json：最佳轮次及训练配置。
-    3. finetuned_model_dir 的父目录/training_history.json：逐轮 loss 与 Recall@10。
+    3. finetuned_model_dir 的父目录/training_history.json：逐轮 loss 与 Hit@10。
 
 目标：
     让查询文本向量靠近正确 ICD 概念向量、远离困难负例向量，从而提高候选召回质量。
@@ -43,7 +43,7 @@ def _precision(torch, choice: str):
 
 
 def train(cfg: Dict[str, Any]) -> Dict[str, Any]:
-    """执行对比学习训练，并返回最佳 Recall@10 与逐轮训练历史。"""
+    """执行对比学习训练，并返回最佳 Hit@10 与逐轮训练历史。"""
     import torch
     import torch.nn.functional as F
     from torch.optim import AdamW
@@ -143,7 +143,7 @@ def train(cfg: Dict[str, Any]) -> Dict[str, Any]:
         hidden = model(**tokens, return_dict=True).last_hidden_state[:, 0]
         return F.normalize(hidden, dim=1)
 
-    best_recall = -1.0
+    best_hit = -1.0
     history = []
     accumulation = train_cfg["gradient_accumulation"]
     optimizer.zero_grad(set_to_none=True)
@@ -189,35 +189,35 @@ def train(cfg: Dict[str, Any]) -> Dict[str, Any]:
                 optimizer.zero_grad(set_to_none=True)
                 scheduler.step()
 
-        recall10 = _validation_recall10(
+        hit10 = _validation_hit10(
             model, tokenizer, validation_rows, targets, train_cfg
         )
         epoch_result = {
             "epoch": epoch + 1,
             "loss": total_loss / max(len(loader), 1),
-            "validation_recall@10": recall10,
+            "validation_hit@10": hit10,
         }
         history.append(epoch_result)
-        if recall10 > best_recall:
-            # 只保存验证集 Recall@10 最好的 checkpoint，而不是无条件保存最后一轮。
-            best_recall = recall10
+        if hit10 > best_hit:
+            # 只保存验证集 Hit@10 最好的 checkpoint，而不是无条件保存最后一轮。
+            best_hit = hit10
             output_dir.mkdir(parents=True, exist_ok=True)
             model.save_pretrained(output_dir)
             tokenizer.save_pretrained(output_dir)
             write_json(output_dir / "training_state.json", {
                 "base_model": model_name,
                 "best_epoch": epoch + 1,
-                "best_validation_recall@10": best_recall,
+                "best_validation_hit@10": best_hit,
                 "training": train_cfg,
                 "seed": cfg["seed"],
             })
-    result = {"best_validation_recall@10": best_recall, "history": history}
+    result = {"best_validation_hit@10": best_hit, "history": history}
     write_json(output_dir.parent / "training_history.json", result)
     return result
 
 
-def _validation_recall10(model, tokenizer, rows, targets, train_cfg) -> float:
-    """计算验证查询的 Recall@10：前 10 个预测命中任一真实目标即记为成功。"""
+def _validation_hit10(model, tokenizer, rows, targets, train_cfg) -> float:
+    """计算验证查询的 Hit@10：前 10 个预测命中任一真实目标即记为成功。"""
     import torch
     import torch.nn.functional as F
 

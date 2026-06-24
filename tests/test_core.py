@@ -58,13 +58,15 @@ class CoreTests(unittest.TestCase):
         self.assertIn("Hierarchy depth: 2", views["context_text"])
 
     def test_ranking_metrics_multi_target(self):
-        metrics = RankingMetrics((1, 5, 10, 50))
+        metrics = RankingMetrics((1, 10, 20, 30, 40, 50))
         metrics.add(["wrong", "target-b", "target-a"], {"target-a", "target-b"})
         result = metrics.result()
-        self.assertEqual(result["Recall@1"], 0.0)
-        self.assertEqual(result["Recall@5"], 1.0)
+        self.assertEqual(result["Hit@1"], 0.0)
+        self.assertEqual(result["Acc@1"], 0.0)
+        self.assertEqual(result["Hit@10"], 1.0)
+        self.assertEqual(result["Acc@10"], 1.0)
         self.assertEqual(result["MRR"], 0.5)
-        self.assertEqual(result["AllTargetRecall@5"], 1.0)
+        self.assertEqual(result["AllTargetRecall@10"], 1.0)
 
     def test_rrf_fusion(self):
         retriever = object.__new__(Retriever)

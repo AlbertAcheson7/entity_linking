@@ -17,12 +17,13 @@ input_files:
 
 models:
   embedding: maidalun1020/bce-embedding-base_v1
+  embedding_adapter: bce # "bce", "sentence_transformers"
   reranker: maidalun1020/bce-reranker-base_v1
   hf_endpoint: https://hf-mirror.com
 
 data:
-  expected_source_terms: 12597
-  expected_target_terms: 36203
+  expected_source_terms: 10742
+  expected_target_terms: 16076
   map_direction: ICD10_TO_ICD11_MMS
   split:
     train: 0.8
@@ -41,7 +42,19 @@ index:
     target_context: icd11_mms_context_bce
 
 retrieval:
+  backend: chroma # "chroma", "matrix"
   fusion_strategy: best_view # "rrf", "best_view"
+  # Matrix backend settings. With ranking_unit=view_record, each target view
+  # is ranked as a separate record; Hit@K succeeds if any returned record maps
+  # to a positive target UID. Set aggregation=max or ranking_unit=entity to
+  # collapse the best target view back to one score per target entity.
+  ranking_unit: view_record # "view_record", "entity"
+  aggregation: none # "none", "max"
+  query_text_key: query_name_text # "query_name_text", "query_context_text", "query_path_text"
+  target_view_keys:
+    - name_text
+    - context_text
+    - path_text
   query_batch_size: 128
   per_view_top_k: 50
   fused_top_k: 50
