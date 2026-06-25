@@ -1,0 +1,40 @@
+{
+  "variant": "base",
+  "split": "test",
+  "reranked": false,
+  "embedding_model": "maidalun1020/bce-embedding-base_v1",
+  "embedding_adapter": "bce",
+  "retrieval_backend": "matrix",
+  "fusion_strategy": "best_view",
+  "ranking_unit": "view_record",
+  "aggregation": "none",
+  "query_text_key": "query_name_text",
+  "target_view_keys": [
+    "name_text",
+    "context_text",
+    "path_text"
+  ],
+  "reranker_model": null,
+  "metrics": {
+    "Hit@1": 0.5079069767441861,
+    "Hit@10": 0.7395348837209302,
+    "Hit@20": 0.8018604651162791,
+    "Hit@30": 0.8288372093023256,
+    "Hit@40": 0.8502325581395349,
+    "Hit@50": 0.867906976744186,
+    "Acc@1": 0.5079069767441861,
+    "Acc@10": 0.7395348837209302,
+    "Acc@20": 0.8018604651162791,
+    "Acc@30": 0.8288372093023256,
+    "Acc@40": 0.8502325581395349,
+    "Acc@50": 0.867906976744186,
+    "AllTargetRecall@1": 0.36617027335144364,
+    "AllTargetRecall@10": 0.6319721378479818,
+    "AllTargetRecall@20": 0.7064956437105724,
+    "AllTargetRecall@30": 0.7427429330276294,
+    "AllTargetRecall@40": 0.7709967829675256,
+    "AllTargetRecall@50": 0.7928877748352618,
+    "MRR": 0.5870435794800424,
+    "queries": 1075
+  }
+}

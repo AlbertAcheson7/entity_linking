@@ -1,0 +1,38 @@
+{
+  "variant": "base",
+  "split": "test",
+  "reranked": false,
+  "embedding_model": "BAAI/bge-m3",
+  "embedding_adapter": "sentence_transformers",
+  "retrieval_backend": "matrix",
+  "fusion_strategy": "best_view",
+  "ranking_unit": "view_record",
+  "aggregation": "none",
+  "query_text_key": "query_name_text",
+  "target_view_keys": [
+    "path_text"
+  ],
+  "reranker_model": null,
+  "metrics": {
+    "Hit@1": 0.5255813953488372,
+    "Hit@10": 0.7758139534883721,
+    "Hit@20": 0.838139534883721,
+    "Hit@30": 0.8520930232558139,
+    "Hit@40": 0.8697674418604651,
+    "Hit@50": 0.8744186046511628,
+    "Acc@1": 0.5255813953488372,
+    "Acc@10": 0.7758139534883721,
+    "Acc@20": 0.838139534883721,
+    "Acc@30": 0.8520930232558139,
+    "Acc@40": 0.8697674418604651,
+    "Acc@50": 0.8744186046511628,
+    "AllTargetRecall@1": 0.3878523096613869,
+    "AllTargetRecall@10": 0.6859072561319374,
+    "AllTargetRecall@20": 0.7602333607322352,
+    "AllTargetRecall@30": 0.7832087850051087,
+    "AllTargetRecall@40": 0.8038464070729634,
+    "AllTargetRecall@50": 0.8130814606471017,
+    "MRR": 0.6121634934377197,
+    "queries": 1075
+  }
+}
