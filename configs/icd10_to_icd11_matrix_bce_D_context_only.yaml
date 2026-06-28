@@ -5,10 +5,10 @@ paths:
   source_dir: data/source
   prepared_dir: data/prepared
   base_chroma_dir: chroma/base
-  finetuned_chroma_dir: chroma/directional
+  finetuned_chroma_dir: chroma/finetuned
   base_model_dir: models/base
-  finetuned_model_dir: models/directional/best
-  experiments_dir: experiments/directional
+  finetuned_model_dir: models/finetuned/best
+  experiments_dir: experiments/matrix_bce/D_context_only
 
 input_files:
   source_terms: who_icd10.jsonl
@@ -16,10 +16,8 @@ input_files:
   maps: icd10_icd11.jsonl
 
 models:
-  embedding: NeuML/pubmedbert-base-embeddings
-  embedding_adapter: directional_hf
-  projection_dim: 256
-  projection_file: directional_projection.pt
+  embedding: maidalun1020/bce-embedding-base_v1
+  embedding_adapter: bce
   reranker: maidalun1020/bce-reranker-base_v1
   hf_endpoint: https://hf-mirror.com
 
@@ -35,20 +33,20 @@ data:
 
 index:
   batch_size: 128
-  embedding_dimension: 256
+  embedding_dimension: 768
   distance: cosine
   collections:
-    source_name: who_icd10_name_directional_pubmedbert
-    source_context: who_icd10_context_directional_pubmedbert
-    target_name: icd11_mms_name_directional_pubmedbert
-    target_context: icd11_mms_context_directional_pubmedbert
+    source_name: who_icd10_name_bce
+    source_context: who_icd10_context_bce
+    target_name: icd11_mms_name_bce
+    target_context: icd11_mms_context_bce
 
 retrieval:
   backend: matrix
   fusion_strategy: best_view
   ranking_unit: view_record
   aggregation: none
-  query_text_key: query_context_text
+  query_text_key: query_name_text
   target_view_keys:
     - context_text
   query_batch_size: 128
