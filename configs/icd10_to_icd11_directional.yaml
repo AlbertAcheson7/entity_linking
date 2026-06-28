@@ -1,0 +1,74 @@
+project_root: .
+seed: 42
+
+paths:
+  source_dir: data/source
+  prepared_dir: data/prepared
+  base_chroma_dir: chroma/base
+  finetuned_chroma_dir: chroma/directional
+  base_model_dir: models/base
+  finetuned_model_dir: models/directional/best
+  experiments_dir: experiments/directional
+
+input_files:
+  source_terms: who_icd10.jsonl
+  target_terms: icd11_mms.jsonl
+  maps: icd10_icd11.jsonl
+
+models:
+  embedding: maidalun1020/bce-embedding-base_v1
+  embedding_adapter: directional_hf
+  projection_dim: 256
+  projection_file: directional_projection.pt
+  reranker: maidalun1020/bce-reranker-base_v1
+  hf_endpoint: https://hf-mirror.com
+
+data:
+  expected_source_terms: 10742
+  expected_target_terms: 16076
+  map_direction: ICD10_TO_ICD11_MMS
+  split:
+    train: 0.8
+    validation: 0.1
+    test: 0.1
+  context_max_characters: 6000
+
+index:
+  batch_size: 128
+  embedding_dimension: 256
+  distance: cosine
+  collections:
+    source_name: who_icd10_name_directional
+    source_context: who_icd10_context_directional
+    target_name: icd11_mms_name_directional
+    target_context: icd11_mms_context_directional
+
+retrieval:
+  backend: matrix
+  fusion_strategy: best_view
+  ranking_unit: view_record
+  aggregation: none
+  query_text_key: query_context_text
+  target_view_keys:
+    - context_text
+  query_batch_size: 128
+  per_view_top_k: 50
+  fused_top_k: 50
+  output_top_k: 10
+  rrf_constant: 60
+  reranker_batch_size: 64
+
+training:
+  epochs: 1
+  batch_size: 16
+  gradient_accumulation: 4
+  learning_rate: 2.0e-5
+  warmup_ratio: 0.05
+  weight_decay: 0.01
+  temperature: 0.05
+  hard_negatives_per_query: 5
+  query_max_length: 256
+  target_max_length: 384
+  mixed_precision: auto
+  gradient_checkpointing: true
+  num_workers: 2

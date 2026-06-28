@@ -63,7 +63,7 @@ class ChromaRetriever:
     def _query_view_batch(
         self, collection, texts: Sequence[str], top_k: int
     ) -> List[List[str]]:
-        embeddings = self.model.encode(
+        embeddings = self.model.encode_query(
             texts, batch_size=self.cfg["retrieval"]["query_batch_size"]
         )
         result = collection.query(
@@ -220,7 +220,7 @@ class MatrixRetriever:
             "batch_size", retrieval.get("query_batch_size", 128)
         )
         texts = [record["text"] for record in self.target_records]
-        return self.model.encode(texts, batch_size, show_progress=True)
+        return self.model.encode_target(texts, batch_size, show_progress=True)
 
     def _top_indices(self, scores: np.ndarray, top_k: int) -> np.ndarray:
         limit = min(top_k, len(scores))
@@ -329,7 +329,7 @@ class MatrixRetriever:
             raise ValueError(f"unknown aggregation: {aggregation}")
 
         texts = [_query_text(item, query_key) for item in queries]
-        query_embeddings = self.model.encode(
+        query_embeddings = self.model.encode_query(
             texts,
             batch_size=retrieval["query_batch_size"],
             show_progress=False,
@@ -349,12 +349,17 @@ class MatrixRetriever:
         return results
 
 
-def Retriever(
-    cfg: Dict[str, Any], variant: str, rerank: bool = False
-) -> ChromaRetriever | MatrixRetriever:
-    backend = cfg.get("retrieval", {}).get("backend", "chroma")
-    if backend == "chroma":
-        return ChromaRetriever(cfg, variant, rerank=rerank)
-    if backend == "matrix":
-        return MatrixRetriever(cfg, variant, rerank=rerank)
-    raise ValueError(f"unknown retrieval backend: {backend}")
+class Retriever:
+    """Factory wrapper that keeps the old test-facing class shape."""
+
+    _fuse = ChromaRetriever._fuse
+
+    def __new__(
+        cls, cfg: Dict[str, Any], variant: str, rerank: bool = False
+    ) -> ChromaRetriever | MatrixRetriever:
+        backend = cfg.get("retrieval", {}).get("backend", "chroma")
+        if backend == "chroma":
+            return ChromaRetriever(cfg, variant, rerank=rerank)
+        if backend == "matrix":
+            return MatrixRetriever(cfg, variant, rerank=rerank)
+        raise ValueError(f"unknown retrieval backend: {backend}")

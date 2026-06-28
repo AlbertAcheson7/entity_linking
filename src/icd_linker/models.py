@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import inspect
+from pathlib import Path
 from typing import Any, Dict, List, Sequence
 
 import numpy as np
@@ -24,6 +25,16 @@ class EmbeddingAdapter:
         self, texts: Sequence[str], batch_size: int, show_progress: bool = False
     ) -> np.ndarray:
         raise NotImplementedError
+
+    def encode_query(
+        self, texts: Sequence[str], batch_size: int, show_progress: bool = False
+    ) -> np.ndarray:
+        return self.encode(texts, batch_size, show_progress)
+
+    def encode_target(
+        self, texts: Sequence[str], batch_size: int, show_progress: bool = False
+    ) -> np.ndarray:
+        return self.encode(texts, batch_size, show_progress)
 
 
 class BCEEmbeddingAdapter(EmbeddingAdapter):
@@ -90,6 +101,98 @@ class SentenceTransformerEmbeddingAdapter(EmbeddingAdapter):
         return normalize_and_check(result)
 
 
+class DirectionalHFEmbeddingAdapter(EmbeddingAdapter):
+    """Hugging Face encoder with optional source/target projection heads."""
+
+    def __init__(
+        self,
+        model_name: str,
+        device: str | None = None,
+        query_max_length: int = 256,
+        target_max_length: int = 384,
+        projection_path: str | Path | None = None,
+    ):
+        import torch
+        import torch.nn as nn
+        import torch.nn.functional as F
+        from transformers import AutoModel, AutoTokenizer
+
+        self.torch = torch
+        self.functional = F
+        self.device = torch.device(
+            device or ("cuda" if torch.cuda.is_available() else "cpu")
+        )
+        self.query_max_length = query_max_length
+        self.target_max_length = target_max_length
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.encoder = AutoModel.from_pretrained(model_name).to(self.device)
+        self.encoder.eval()
+        self.source_projection = None
+        self.target_projection = None
+
+        if projection_path is not None and Path(projection_path).exists():
+            state = torch.load(projection_path, map_location=self.device)
+            hidden_size = int(state["hidden_size"])
+            projection_dim = int(state["projection_dim"])
+            self.source_projection = nn.Linear(
+                hidden_size, projection_dim, bias=False
+            ).to(self.device)
+            self.target_projection = nn.Linear(
+                hidden_size, projection_dim, bias=False
+            ).to(self.device)
+            self.source_projection.load_state_dict(state["source_projection"])
+            self.target_projection.load_state_dict(state["target_projection"])
+            self.source_projection.eval()
+            self.target_projection.eval()
+
+    def _encode_side(
+        self,
+        texts: Sequence[str],
+        batch_size: int,
+        max_length: int,
+        projection,
+    ) -> np.ndarray:
+        vectors = []
+        with self.torch.no_grad():
+            for start in range(0, len(texts), batch_size):
+                batch = list(texts[start:start + batch_size])
+                tokens = self.tokenizer(
+                    batch,
+                    padding=True,
+                    truncation=True,
+                    max_length=max_length,
+                    return_tensors="pt",
+                )
+                tokens = {k: v.to(self.device) for k, v in tokens.items()}
+                hidden = self.encoder(
+                    **tokens, return_dict=True
+                ).last_hidden_state[:, 0]
+                if projection is not None:
+                    hidden = projection(hidden)
+                hidden = self.functional.normalize(hidden, dim=1)
+                vectors.append(hidden.cpu().numpy())
+        return normalize_and_check(np.concatenate(vectors, axis=0))
+
+    def encode(
+        self, texts: Sequence[str], batch_size: int, show_progress: bool = False
+    ) -> np.ndarray:
+        return self.encode_query(texts, batch_size, show_progress)
+
+    def encode_query(
+        self, texts: Sequence[str], batch_size: int, show_progress: bool = False
+    ) -> np.ndarray:
+        return self._encode_side(
+            texts, batch_size, self.query_max_length, self.source_projection
+        )
+
+    def encode_target(
+        self, texts: Sequence[str], batch_size: int, show_progress: bool = False
+    ) -> np.ndarray:
+        return self._encode_side(
+            texts, batch_size, self.target_max_length, self.target_projection
+        )
+
+
 def normalize_and_check(values: np.ndarray) -> np.ndarray:
     """校验向量数值，并逐行做 L2 归一化，便于用点积计算余弦相似度。"""
     if values.ndim != 2 or not np.isfinite(values).all():
@@ -119,6 +222,20 @@ def load_embedding(cfg: Dict[str, Any], variant: str) -> EmbeddingAdapter:
         return BCEEmbeddingAdapter(model_name, device=device)
     if adapter in {"sentence_transformers", "sentence-transformers"}:
         return SentenceTransformerEmbeddingAdapter(model_name, device=device)
+    if adapter in {"directional_hf", "hf_directional"}:
+        train_cfg = cfg.get("training", {})
+        projection_path = None
+        if variant == "finetuned":
+            projection_path = Path(cfg["paths"]["finetuned_model_dir"]) / (
+                cfg["models"].get("projection_file", "directional_projection.pt")
+            )
+        return DirectionalHFEmbeddingAdapter(
+            model_name,
+            device=device,
+            query_max_length=train_cfg.get("query_max_length", 256),
+            target_max_length=train_cfg.get("target_max_length", 384),
+            projection_path=projection_path,
+        )
     raise ValueError(f"unknown embedding_adapter: {adapter}")
 
 

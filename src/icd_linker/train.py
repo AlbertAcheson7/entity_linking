@@ -45,6 +45,7 @@ def _precision(torch, choice: str):
 def train(cfg: Dict[str, Any]) -> Dict[str, Any]:
     """执行对比学习训练，并返回最佳 Hit@10 与逐轮训练历史。"""
     import torch
+    import torch.nn as nn
     import torch.nn.functional as F
     from torch.optim import AdamW
     from torch.utils.data import DataLoader, Dataset
@@ -61,11 +62,22 @@ def train(cfg: Dict[str, Any]) -> Dict[str, Any]:
     validation_rows = list(read_jsonl(prepared / "validation.jsonl"))
     targets = load_lookup(prepared / "target_terms.jsonl")
     train_cfg = cfg["training"]
+    model_cfg = cfg.get("models", {})
+    is_directional = model_cfg.get("embedding_adapter") in {
+        "directional_hf", "hf_directional",
+    }
     model_name = cfg["models"]["embedding"]
     output_dir = Path(cfg["paths"]["finetuned_model_dir"])
     output_dir.parent.mkdir(parents=True, exist_ok=True)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModel.from_pretrained(model_name).cuda()
+    hidden_size = int(model.config.hidden_size)
+    projection_dim = int(model_cfg.get("projection_dim", hidden_size))
+    source_projection = None
+    target_projection = None
+    if is_directional:
+        source_projection = nn.Linear(hidden_size, projection_dim, bias=False).cuda()
+        target_projection = nn.Linear(hidden_size, projection_dim, bias=False).cuda()
     if train_cfg.get("gradient_checkpointing") and hasattr(
         model, "gradient_checkpointing_enable"
     ):
@@ -115,8 +127,12 @@ def train(cfg: Dict[str, Any]) -> Dict[str, Any]:
         TrainingDataset(), batch_size=train_cfg["batch_size"], shuffle=True,
         num_workers=train_cfg["num_workers"], collate_fn=collate,
     )
+    parameters = list(model.parameters())
+    if is_directional:
+        parameters.extend(source_projection.parameters())
+        parameters.extend(target_projection.parameters())
     optimizer = AdamW(
-        model.parameters(), lr=train_cfg["learning_rate"],
+        parameters, lr=train_cfg["learning_rate"],
         weight_decay=train_cfg["weight_decay"],
     )
 
@@ -133,7 +149,7 @@ def train(cfg: Dict[str, Any]) -> Dict[str, Any]:
     )
     amp_dtype = _precision(torch, train_cfg["mixed_precision"])
 
-    def embed(texts: List[str], max_length: int):
+    def embed(texts: List[str], max_length: int, side: str = "shared"):
         """编码文本并返回单位向量；单位向量点积等价于余弦相似度。"""
         tokens = tokenizer(
             texts, padding=True, truncation=True, max_length=max_length,
@@ -141,6 +157,10 @@ def train(cfg: Dict[str, Any]) -> Dict[str, Any]:
         )
         tokens = {k: v.cuda(non_blocking=True) for k, v in tokens.items()}
         hidden = model(**tokens, return_dict=True).last_hidden_state[:, 0]
+        if side == "source" and source_projection is not None:
+            hidden = source_projection(hidden)
+        elif side == "target" and target_projection is not None:
+            hidden = target_projection(hidden)
         return F.normalize(hidden, dim=1)
 
     best_hit = -1.0
@@ -157,10 +177,12 @@ def train(cfg: Dict[str, Any]) -> Dict[str, Any]:
                 enabled=autocast_enabled,
             ):
                 query_vectors = embed(
-                    batch["query_texts"], train_cfg["query_max_length"]
+                    batch["query_texts"], train_cfg["query_max_length"],
+                    side="source",
                 )
                 candidate_vectors = embed(
-                    batch["candidate_texts"], train_cfg["target_max_length"]
+                    batch["candidate_texts"], train_cfg["target_max_length"],
+                    side="target",
                 )
 
                 # 每个查询与 batch 内全部候选做相似度比较，形成 in-batch negatives。
@@ -190,7 +212,9 @@ def train(cfg: Dict[str, Any]) -> Dict[str, Any]:
                 scheduler.step()
 
         hit10 = _validation_hit10(
-            model, tokenizer, validation_rows, targets, train_cfg
+            model, tokenizer, validation_rows, targets, train_cfg,
+            source_projection=source_projection,
+            target_projection=target_projection,
         )
         epoch_result = {
             "epoch": epoch + 1,
@@ -204,8 +228,22 @@ def train(cfg: Dict[str, Any]) -> Dict[str, Any]:
             output_dir.mkdir(parents=True, exist_ok=True)
             model.save_pretrained(output_dir)
             tokenizer.save_pretrained(output_dir)
+            projection_file = model_cfg.get(
+                "projection_file", "directional_projection.pt"
+            )
+            if is_directional:
+                torch.save({
+                    "hidden_size": hidden_size,
+                    "projection_dim": projection_dim,
+                    "source_projection": source_projection.state_dict(),
+                    "target_projection": target_projection.state_dict(),
+                }, output_dir / projection_file)
             write_json(output_dir / "training_state.json", {
                 "base_model": model_name,
+                "model_type": (
+                    "directional_biencoder" if is_directional
+                    else "shared_encoder"
+                ),
                 "best_epoch": epoch + 1,
                 "best_validation_hit@10": best_hit,
                 "training": train_cfg,
@@ -216,7 +254,10 @@ def train(cfg: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def _validation_hit10(model, tokenizer, rows, targets, train_cfg) -> float:
+def _validation_hit10(
+    model, tokenizer, rows, targets, train_cfg,
+    source_projection=None, target_projection=None,
+) -> float:
     """计算验证查询的 Hit@10：前 10 个预测命中任一真实目标即记为成功。"""
     import torch
     import torch.nn.functional as F
@@ -240,6 +281,8 @@ def _validation_hit10(model, tokenizer, rows, targets, train_cfg) -> float:
             )
             tokens = {k: v.cuda() for k, v in tokens.items()}
             hidden = model(**tokens, return_dict=True).last_hidden_state[:, 0]
+            if target_projection is not None:
+                hidden = target_projection(hidden)
             target_vectors.append(F.normalize(hidden, dim=1))
     target_matrix = torch.cat(target_vectors).T.contiguous()
     hits = 0
@@ -256,6 +299,8 @@ def _validation_hit10(model, tokenizer, rows, targets, train_cfg) -> float:
             )
             tokens = {k: v.cuda() for k, v in tokens.items()}
             hidden = model(**tokens, return_dict=True).last_hidden_state[:, 0]
+            if source_projection is not None:
+                hidden = source_projection(hidden)
             query_vectors = F.normalize(hidden, dim=1)
             top_indices = (query_vectors @ target_matrix).topk(10, dim=1).indices
             for row, indices in zip(batch, top_indices):
