@@ -5,10 +5,10 @@ paths:
   source_dir: data/source
   prepared_dir: data/prepared
   base_chroma_dir: chroma/base
-  finetuned_chroma_dir: chroma/finetuned
+  finetuned_chroma_dir: chroma/matrix_bce_finetuned
   base_model_dir: models/base
-  finetuned_model_dir: models/finetuned/best
-  experiments_dir: experiments/matrix_bce/B_context_query
+  finetuned_model_dir: models/matrix_bce/best
+  experiments_dir: experiments/matrix_bce
 
 input_files:
   source_terms: who_icd10.jsonl
@@ -46,7 +46,7 @@ retrieval:
   fusion_strategy: best_view
   ranking_unit: view_record
   aggregation: none
-  query_text_key: query_context_text
+  query_text_key: query_name_text
   target_view_keys:
     - name_text
     - context_text
@@ -59,14 +59,14 @@ retrieval:
   reranker_batch_size: 64
 
 training:
-  epochs: 1
-  batch_size: 16
-  gradient_accumulation: 4
+  epochs: 10
+  batch_size: 64
+  gradient_accumulation: 2
   learning_rate: 2.0e-5
-  warmup_ratio: 0.05
+  warmup_ratio: 0.1
   weight_decay: 0.01
   temperature: 0.05
-  hard_negatives_per_query: 5
+  hard_negatives_per_query: 10
   query_max_length: 256
   target_max_length: 384
   mixed_precision: auto

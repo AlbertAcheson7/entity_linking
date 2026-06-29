@@ -5,10 +5,10 @@ paths:
   source_dir: data/source
   prepared_dir: data/prepared
   base_chroma_dir: chroma/base
-  finetuned_chroma_dir: chroma/finetuned
+  finetuned_chroma_dir: chroma/directional
   base_model_dir: models/base
-  finetuned_model_dir: models/finetuned/best
-  experiments_dir: experiments/chroma
+  finetuned_model_dir: models/directional/best
+  experiments_dir: experiments/directional
 
 input_files:
   source_terms: who_icd10.jsonl
@@ -16,8 +16,10 @@ input_files:
   maps: icd10_icd11.jsonl
 
 models:
-  embedding: maidalun1020/bce-embedding-base_v1
-  embedding_adapter: bce
+  embedding: NeuML/pubmedbert-base-embeddings
+  embedding_adapter: directional_hf
+  projection_dim: 256
+  projection_file: directional_projection.pt
   reranker: maidalun1020/bce-reranker-base_v1
   hf_endpoint: https://hf-mirror.com
 
@@ -33,24 +35,22 @@ data:
 
 index:
   batch_size: 128
-  embedding_dimension: 768
+  embedding_dimension: 256
   distance: cosine
   collections:
-    source_name: who_icd10_name_bce
-    source_context: who_icd10_context_bce
-    target_name: icd11_mms_name_bce
-    target_context: icd11_mms_context_bce
+    source_name: who_icd10_name_directional_pubmedbert
+    source_context: who_icd10_context_directional_pubmedbert
+    target_name: icd11_mms_name_directional_pubmedbert
+    target_context: icd11_mms_context_directional_pubmedbert
 
 retrieval:
-  backend: chroma
+  backend: matrix
   fusion_strategy: best_view
   ranking_unit: view_record
   aggregation: none
-  query_text_key: query_name_text
+  query_text_key: query_context_text
   target_view_keys:
-    - name_text
     - context_text
-    - path_text
   query_batch_size: 128
   per_view_top_k: 50
   fused_top_k: 50
@@ -59,14 +59,14 @@ retrieval:
   reranker_batch_size: 64
 
 training:
-  epochs: 1
-  batch_size: 16
-  gradient_accumulation: 4
+  epochs: 10
+  batch_size: 64
+  gradient_accumulation: 2
   learning_rate: 2.0e-5
-  warmup_ratio: 0.05
+  warmup_ratio: 0.1
   weight_decay: 0.01
   temperature: 0.05
-  hard_negatives_per_query: 5
+  hard_negatives_per_query: 10
   query_max_length: 256
   target_max_length: 384
   mixed_precision: auto
