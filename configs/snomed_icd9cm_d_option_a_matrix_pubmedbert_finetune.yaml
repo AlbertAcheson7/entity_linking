@@ -1,46 +1,40 @@
 project_root: .
 seed: 42
-
 paths:
-  source_dir: data/source
-  prepared_dir: data/prepared
-  base_chroma_dir: chroma/base
-  finetuned_chroma_dir: chroma/matrix_pubmedbert_finetuned
+  source_dir: data/source_snomed_icd9cm_d_option_a
+  prepared_dir: data/prepared_snomed_icd9cm_d_option_a
+  base_chroma_dir: chroma/snomed_icd9cm_d_option_a/pubmedbert_finetuned/base
+  finetuned_chroma_dir: chroma/snomed_icd9cm_d_option_a/pubmedbert_finetuned/finetuned
   base_model_dir: models/base
-  finetuned_model_dir: models/matrix_pubmedbert/best
-  experiments_dir: experiments/matrix_pubmedbert
-
+  finetuned_model_dir: models/snomed_icd9cm_d_option_a/pubmedbert_finetuned/best
+  experiments_dir: experiments/snomed_icd9cm_d_option_a/matrix_pubmedbert
 input_files:
-  source_terms: who_icd10.jsonl
-  target_terms: icd11_mms.jsonl
-  maps: icd10_icd11.jsonl
-
+  source_terms: snomed_ct.jsonl
+  target_terms: icd9cm_d.jsonl
+  maps: snomed_icd9cm_d.jsonl
 models:
   embedding: NeuML/pubmedbert-base-embeddings
   embedding_adapter: sentence_transformers
   reranker: maidalun1020/bce-reranker-base_v1
   hf_endpoint: https://hf-mirror.com
-
 data:
-  expected_source_terms: 10742
-  expected_target_terms: 16076
-  map_direction: ICD10_TO_ICD11_MMS
+  expected_source_terms: 6858
+  expected_target_terms: 7017
+  map_direction: SNOMEDCT_TO_ICD9CM_D
   split:
     train: 0.8
     validation: 0.1
     test: 0.1
   context_max_characters: 6000
-
 index:
   batch_size: 128
   embedding_dimension: 768
   distance: cosine
   collections:
-    source_name: who_icd10_name_pubmedbert
-    source_context: who_icd10_context_pubmedbert
-    target_name: icd11_mms_name_pubmedbert
-    target_context: icd11_mms_context_pubmedbert
-
+    source_name: snomed_ct_icd9cm_d_name_pubmedbert_finetuned
+    source_context: snomed_ct_icd9cm_d_context_pubmedbert_finetuned
+    target_name: icd9cm_d_name_pubmedbert_finetuned
+    target_context: icd9cm_d_context_pubmedbert_finetuned
 retrieval:
   backend: matrix
   fusion_strategy: best_view
@@ -48,21 +42,20 @@ retrieval:
   aggregation: none
   query_text_key: query_name_text
   target_view_keys:
-    - name_text
-    - context_text
-    - path_text
+  - name_text
+  - context_text
+  - path_text
   query_batch_size: 128
   per_view_top_k: 300
   fused_top_k: 300
   output_top_k: 10
   rrf_constant: 60
   reranker_batch_size: 64
-
 training:
   epochs: 10
   batch_size: 16
   gradient_accumulation: 8
-  learning_rate: 2.0e-5
+  learning_rate: 2.0e-05
   warmup_ratio: 0.1
   weight_decay: 0.01
   temperature: 0.05

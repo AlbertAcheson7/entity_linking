@@ -16,3 +16,4 @@ models
 .history
 # 排除所有目录下的 test_retrieval_predictions.jsonl 文件
 experiments/**/test_retrieval_predictions.jsonl
+nohup.out

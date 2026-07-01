@@ -1,0 +1,40 @@
+{
+  "variant": "base",
+  "split": "test",
+  "reranked": false,
+  "embedding_model": "NeuML/pubmedbert-base-embeddings",
+  "embedding_adapter": "sentence_transformers",
+  "retrieval_backend": "matrix",
+  "fusion_strategy": "best_view",
+  "ranking_unit": "view_record",
+  "aggregation": "none",
+  "query_text_key": "query_name_text",
+  "target_view_keys": [
+    "name_text",
+    "context_text",
+    "path_text"
+  ],
+  "reranker_model": null,
+  "metrics": {
+    "Hit@1": 0.5545851528384279,
+    "Hit@10": 0.8209606986899564,
+    "Hit@20": 0.8675400291120815,
+    "Hit@30": 0.8864628820960698,
+    "Hit@40": 0.8981077147016011,
+    "Hit@50": 0.9082969432314411,
+    "Acc@1": 0.5545851528384279,
+    "Acc@10": 0.8209606986899564,
+    "Acc@20": 0.8675400291120815,
+    "Acc@30": 0.8864628820960698,
+    "Acc@40": 0.8981077147016011,
+    "Acc@50": 0.9082969432314411,
+    "AllTargetRecall@1": 0.5487627365356623,
+    "AllTargetRecall@10": 0.8195050946142649,
+    "AllTargetRecall@20": 0.8653566229985444,
+    "AllTargetRecall@30": 0.8842794759825328,
+    "AllTargetRecall@40": 0.895924308588064,
+    "AllTargetRecall@50": 0.9068413391557496,
+    "MRR": 0.6404061176944412,
+    "queries": 687
+  }
+}

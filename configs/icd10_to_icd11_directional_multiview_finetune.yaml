@@ -5,10 +5,10 @@ paths:
   source_dir: data/source
   prepared_dir: data/prepared
   base_chroma_dir: chroma/base
-  finetuned_chroma_dir: chroma/matrix_pubmedbert_finetuned
+  finetuned_chroma_dir: chroma/directional_multiview
   base_model_dir: models/base
-  finetuned_model_dir: models/matrix_pubmedbert/best
-  experiments_dir: experiments/matrix_pubmedbert
+  finetuned_model_dir: models/directional_multiview/best
+  experiments_dir: experiments/directional_multiview
 
 input_files:
   source_terms: who_icd10.jsonl
@@ -17,7 +17,9 @@ input_files:
 
 models:
   embedding: NeuML/pubmedbert-base-embeddings
-  embedding_adapter: sentence_transformers
+  embedding_adapter: directional_hf
+  projection_dim: 256
+  projection_file: directional_projection.pt
   reranker: maidalun1020/bce-reranker-base_v1
   hf_endpoint: https://hf-mirror.com
 
@@ -33,13 +35,13 @@ data:
 
 index:
   batch_size: 128
-  embedding_dimension: 768
+  embedding_dimension: 256
   distance: cosine
   collections:
-    source_name: who_icd10_name_pubmedbert
-    source_context: who_icd10_context_pubmedbert
-    target_name: icd11_mms_name_pubmedbert
-    target_context: icd11_mms_context_pubmedbert
+    source_name: who_icd10_name_directional_multiview_pubmedbert
+    source_context: who_icd10_context_directional_multiview_pubmedbert
+    target_name: icd11_mms_name_directional_multiview_pubmedbert
+    target_context: icd11_mms_context_directional_multiview_pubmedbert
 
 retrieval:
   backend: matrix

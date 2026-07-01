@@ -1,0 +1,40 @@
+{
+  "variant": "finetuned",
+  "split": "test",
+  "reranked": false,
+  "embedding_model": "/home/zhangzy/entity_linking/models/snomed_icd9cm_d_option_a/pubmedbert_finetuned/best",
+  "embedding_adapter": "sentence_transformers",
+  "retrieval_backend": "matrix",
+  "fusion_strategy": "best_view",
+  "ranking_unit": "view_record",
+  "aggregation": "none",
+  "query_text_key": "query_name_text",
+  "target_view_keys": [
+    "name_text",
+    "context_text",
+    "path_text"
+  ],
+  "reranker_model": null,
+  "metrics": {
+    "Hit@1": 0.6521106259097526,
+    "Hit@10": 0.8893740902474527,
+    "Hit@20": 0.9141193595342066,
+    "Hit@30": 0.9243085880640466,
+    "Hit@40": 0.925764192139738,
+    "Hit@50": 0.9315866084425036,
+    "Acc@1": 0.6521106259097526,
+    "Acc@10": 0.8893740902474527,
+    "Acc@20": 0.9141193595342066,
+    "Acc@30": 0.9243085880640466,
+    "Acc@40": 0.925764192139738,
+    "Acc@50": 0.9315866084425036,
+    "AllTargetRecall@1": 0.6455604075691412,
+    "AllTargetRecall@10": 0.8857350800582242,
+    "AllTargetRecall@20": 0.9119359534206696,
+    "AllTargetRecall@30": 0.9221251819505094,
+    "AllTargetRecall@40": 0.9243085880640466,
+    "AllTargetRecall@50": 0.9301310043668122,
+    "MRR": 0.7337971135234237,
+    "queries": 687
+  }
+}

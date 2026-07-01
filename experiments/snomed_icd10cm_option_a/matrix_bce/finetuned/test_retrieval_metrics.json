@@ -1,0 +1,40 @@
+{
+  "variant": "finetuned",
+  "split": "test",
+  "reranked": false,
+  "embedding_model": "/home/zhangzy/entity_linking/models/snomed_icd10cm_option_a/bce_finetuned/best",
+  "embedding_adapter": "bce",
+  "retrieval_backend": "matrix",
+  "fusion_strategy": "best_view",
+  "ranking_unit": "view_record",
+  "aggregation": "none",
+  "query_text_key": "query_name_text",
+  "target_view_keys": [
+    "name_text",
+    "context_text",
+    "path_text"
+  ],
+  "reranker_model": null,
+  "metrics": {
+    "Hit@1": 0.4146187111064234,
+    "Hit@10": 0.6356924375065921,
+    "Hit@20": 0.7049889252188588,
+    "Hit@30": 0.7400063284463664,
+    "Hit@40": 0.7618394684105052,
+    "Hit@50": 0.7781879548570826,
+    "Acc@1": 0.4146187111064234,
+    "Acc@10": 0.6356924375065921,
+    "Acc@20": 0.7049889252188588,
+    "Acc@30": 0.7400063284463664,
+    "Acc@40": 0.7618394684105052,
+    "Acc@50": 0.7781879548570826,
+    "AllTargetRecall@1": 0.38839784832823576,
+    "AllTargetRecall@10": 0.6041873220124451,
+    "AllTargetRecall@20": 0.6743532177136223,
+    "AllTargetRecall@30": 0.7110037116840197,
+    "AllTargetRecall@40": 0.7337607545918905,
+    "AllTargetRecall@50": 0.7506454010778449,
+    "MRR": 0.47933093975151564,
+    "queries": 9481
+  }
+}

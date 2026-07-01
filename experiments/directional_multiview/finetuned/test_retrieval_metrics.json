@@ -1,0 +1,40 @@
+{
+  "variant": "finetuned",
+  "split": "test",
+  "reranked": false,
+  "embedding_model": "/home/zhangzy/entity_linking/models/directional_multiview/best",
+  "embedding_adapter": "directional_hf",
+  "retrieval_backend": "matrix",
+  "fusion_strategy": "best_view",
+  "ranking_unit": "view_record",
+  "aggregation": "none",
+  "query_text_key": "query_name_text",
+  "target_view_keys": [
+    "name_text",
+    "context_text",
+    "path_text"
+  ],
+  "reranker_model": null,
+  "metrics": {
+    "Hit@1": 0.6102325581395349,
+    "Hit@10": 0.8567441860465116,
+    "Hit@20": 0.8986046511627906,
+    "Hit@30": 0.9162790697674419,
+    "Hit@40": 0.9302325581395349,
+    "Hit@50": 0.9413953488372093,
+    "Acc@1": 0.6102325581395349,
+    "Acc@10": 0.8567441860465116,
+    "Acc@20": 0.8986046511627906,
+    "Acc@30": 0.9162790697674419,
+    "Acc@40": 0.9302325581395349,
+    "Acc@50": 0.9413953488372093,
+    "AllTargetRecall@1": 0.4253846373681331,
+    "AllTargetRecall@10": 0.7483111536153545,
+    "AllTargetRecall@20": 0.8199278814181289,
+    "AllTargetRecall@30": 0.8481432009822861,
+    "AllTargetRecall@40": 0.8711375903555202,
+    "AllTargetRecall@50": 0.8859367373755974,
+    "MRR": 0.6866189187781242,
+    "queries": 1075
+  }
+}

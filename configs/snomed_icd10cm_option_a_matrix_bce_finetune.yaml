@@ -1,0 +1,67 @@
+project_root: .
+seed: 42
+paths:
+  source_dir: data/source_snomed_icd10cm_option_a
+  prepared_dir: data/prepared_snomed_icd10_option_a
+  base_chroma_dir: chroma/snomed_icd10cm_option_a/bce_finetuned/base
+  finetuned_chroma_dir: chroma/snomed_icd10cm_option_a/bce_finetuned/finetuned
+  base_model_dir: models/base
+  finetuned_model_dir: models/snomed_icd10cm_option_a/bce_finetuned/best
+  experiments_dir: experiments/snomed_icd10cm_option_a/matrix_bce
+input_files:
+  source_terms: snomed_ct.jsonl
+  target_terms: icd10cm.jsonl
+  maps: snomed_icd10cm.jsonl
+models:
+  embedding: maidalun1020/bce-embedding-base_v1
+  embedding_adapter: bce
+  reranker: maidalun1020/bce-reranker-base_v1
+  hf_endpoint: https://hf-mirror.com
+data:
+  expected_source_terms: 94804
+  expected_target_terms: 14885
+  map_direction: SNOMEDCT_TO_ICD10CM
+  split:
+    train: 0.8
+    validation: 0.1
+    test: 0.1
+  context_max_characters: 6000
+index:
+  batch_size: 128
+  embedding_dimension: 768
+  distance: cosine
+  collections:
+    source_name: snomed_ct_icd10cm_name_bce_finetuned
+    source_context: snomed_ct_icd10cm_context_bce_finetuned
+    target_name: icd10cm_name_bce_finetuned
+    target_context: icd10cm_context_bce_finetuned
+retrieval:
+  backend: matrix
+  fusion_strategy: best_view
+  ranking_unit: view_record
+  aggregation: none
+  query_text_key: query_name_text
+  target_view_keys:
+  - name_text
+  - context_text
+  - path_text
+  query_batch_size: 128
+  per_view_top_k: 300
+  fused_top_k: 300
+  output_top_k: 10
+  rrf_constant: 60
+  reranker_batch_size: 64
+training:
+  epochs: 10
+  batch_size: 16
+  gradient_accumulation: 8
+  learning_rate: 2.0e-05
+  warmup_ratio: 0.1
+  weight_decay: 0.01
+  temperature: 0.05
+  hard_negatives_per_query: 10
+  query_max_length: 256
+  target_max_length: 384
+  mixed_precision: auto
+  gradient_checkpointing: true
+  num_workers: 2
